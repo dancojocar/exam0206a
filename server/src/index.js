@@ -30,9 +30,7 @@ for (let i = 0; i < 10; i++) {
         id: i + 1,
         name: itemsSample[getRandomInt(0, itemsSample.length - 1)],
         quantity: getRandomInt(5, 10),
-        status: statusTypes[0],
-        submittedDate: Date.now(),
-        completedDate: null,
+        status: statusTypes[0]
     });
 }
 
@@ -53,25 +51,28 @@ router.post('/buy', ctx => {
     const headers = ctx.request.body;
     console.log("body: " + JSON.stringify(headers));
     const id = headers.id;
-
-    const index = items.findIndex(item => item.id === id);
-    if (index === -1) {
-        ctx.response.body = {text: 'Item not found'};
-        ctx.response.status = 404;
-    } else {
-        console.log("found item: " + index);
-        let item = items[index];
-        if (item.status != statusTypes[0]) {
-            ctx.response.body = {text: 'Not a pending item'};
+    if (typeof id != 'undefined') {
+        const index = items.findIndex(item => item.id === id);
+        if (index === -1) {
+            ctx.response.body = {text: 'Item not found'};
             ctx.response.status = 404;
         } else {
-            console.log("Valid buy request of: " + JSON.stringify(item));
-            item.status = statusTypes[1];
-            item.completedDate = Date.now();
-            broadcast(item);
-            ctx.response.body = item;
-            ctx.response.status = 200;
+            console.log("found item: " + index);
+            let item = items[index];
+            if (item.status != statusTypes[0]) {
+                ctx.response.body = {text: 'Not a pending item'};
+                ctx.response.status = 404;
+            } else {
+                console.log("Valid buy request of: " + JSON.stringify(item));
+                item.status = statusTypes[1];
+                broadcast(item);
+                ctx.response.body = item;
+                ctx.response.status = 200;
+            }
         }
+    } else {
+        ctx.response.body = {text: 'Missing id'};
+        ctx.response.status = 404;
     }
 });
 
@@ -80,19 +81,29 @@ router.post('/add', ctx => {
     console.log("body: " + JSON.stringify(headers));
     const name = headers.name;
     const quantity = headers.quantity;
+    if (typeof name != 'undefined' && typeof quantity != 'undefined') {
 
-    const index = items.findIndex(item => item.name === name && item.status === statusTypes[0]);
+        const index = items.findIndex(item => item.name === name && item.status === statusTypes[0]);
 
-    if (index === -1) {
-        let maxId = Math.max.apply(Math, items.map(function (item) {
-                return item.id;
-            })) + 1;
-        let item = {id: maxId, name, quantity, status: statusTypes[0], submittedDate: Date.now(), completedDate: null};
-        item.push(item);
-        ctx.response.body = item;
-        ctx.response.status = 200;
-    }else{
-        ctx.response.body = {text: 'Item already on the list'};
+        if (index === -1) {
+            let maxId = Math.max.apply(Math, items.map(function (item) {
+                    return item.id;
+                })) + 1;
+            let item = {
+                id: maxId,
+                name,
+                quantity,
+                status: statusTypes[0]
+            };
+            items.push(item);
+            ctx.response.body = item;
+            ctx.response.status = 200;
+        } else {
+            ctx.response.body = {text: 'Item already on the list'};
+            ctx.response.status = 404;
+        }
+    } else {
+        ctx.response.body = {text: 'Name or quantity missing'};
         ctx.response.status = 404;
     }
 });
